@@ -1,5 +1,5 @@
 var EventEmitter = require('events').EventEmitter;
-var promisedConnection = require('../lib/promisedConnection');
+var rabbitPie = require('rabbit-pie');
 var distexProvider = require('../lib/distexProvider');
 require('chai').should();
 var Promise = require('promise');
@@ -11,7 +11,7 @@ describe('distex provider', function () {
     var cleanupEmitter = new EventEmitter();
 
     before(function (done) {
-        promisedConnection.connect().then(function (conn) {
+        rabbitPie.connect().then(function (conn) {
             connection = conn;
             return connection.declareExchange('distex');
         }).then(function (exchange) {
@@ -60,13 +60,26 @@ describe('distex provider', function () {
         });
     });
 
-    it('should should publish event.handler.available when supplied callback returns a truthy promise', function (done) {
-        distexProvider.create(connection, function canHandle(request) {
-            return Promise.resolve(true);
-        }).then(function onDistextProviderInitialised(distexProvider) {
-            cleanupEmitter.once('cleanup', distexProvider.dispose.bind(distexProvider));
+    describe('responding to event.handler.required', function () {
+        var canHandle;
+        var provider;
+        beforeEach(function initialiseDistexProvider(done) {
+            canHandle = undefined;
+            distexProvider.create(connection, function canHandleWrapper(request) {
+                return canHandle(request)
+            }).then(function (distexProvider) {
+                provider = distexProvider;
+                done();
+            }).catch(done);
+        });
 
-            console.log('distex provider initialised, publishing message')
+        it('should should publish event.handler.available when supplied callback returns a truthy promise', function (done) {
+            cleanupEmitter.once('cleanup', provider.dispose.bind(provider));
+
+            canHandle = function () {
+                return Promise.resolve(true)
+            };
+
             clientQueue.bind('event.handler.available.#').then(function () {
                 clientQueue.once('message', function confirmReceivedCorrectMessage(message) {
                     message = JSON.parse(message);
@@ -81,9 +94,8 @@ describe('distex provider', function () {
                     id: 12345
                 });
             });
-        }).catch(function (error) {
-            console.log('badness', error);
-            done(error);
+
         });
     });
+
 });
