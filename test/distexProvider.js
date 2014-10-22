@@ -9,8 +9,18 @@ describe('distex provider', function () {
     var clientQueue;
     var connection;
     var cleanupEmitter = new EventEmitter();
+    var messages;
+    var observerQueue;
+
+
+    beforeEach(function (done) {
+        console.log('in before each');
+        messages = [];
+        done();
+    });
 
     before(function (done) {
+        console.log('in before');
         rabbitPie.connect().then(function (conn) {
             connection = conn;
             return connection.declareExchange('distex');
@@ -19,7 +29,19 @@ describe('distex provider', function () {
             return exchange.createQueue();
         }).then(function (queue) {
             clientQueue = queue;
-            done();
+        }).then(function () {
+            return distextExchange.createQueue('observer');
+        }).then(function (secondQueue) {
+            observerQueue = secondQueue;
+            observerQueue.bind('#').then(function () {
+                observerQueue.on('message', function (message, headers, deliveryInfo) {
+                    messages.push({
+                        message: JSON.parse(message),
+                        key: deliveryInfo.routingKey
+                    });
+                });
+                done();
+            });
         }).catch(done);
     });
 
@@ -28,6 +50,8 @@ describe('distex provider', function () {
         cleanupEmitter.emit('cleanup');
         clientQueue.dispose();
         clientQueue = undefined;
+        observerQueue.dispose();
+        observerQueue = undefined;
         setTimeout(connection.disconnect.bind(connection), 500);
         connection = undefined;
         setTimeout(done, 1000);
@@ -35,6 +59,9 @@ describe('distex provider', function () {
 
     afterEach(function (done) {
         console.log('in afterEach');
+        messages.forEach(function (item) {
+            console.log(item.key + '\t\t>  ' + JSON.stringify(item.message));
+        });
         if (cleanupEmitter) {
             cleanupEmitter.emit('cleanup')
         };
@@ -60,7 +87,7 @@ describe('distex provider', function () {
         });
     });
 
-    describe('responding to event.handler.required', function () {
+    describe('event.handler.required published', function () {
         var canHandle;
         var provider;
         beforeEach(function initialiseDistexProvider(done) {
@@ -80,11 +107,11 @@ describe('distex provider', function () {
                 return Promise.resolve(true)
             };
 
-            clientQueue.bind('event.handler.available.#').then(function () {
+            clientQueue.bind('event.handler.available').then(function () {
                 clientQueue.once('message', function confirmReceivedCorrectMessage(message) {
                     message = JSON.parse(message);
                     message.requestId.should.equal(12345);
-                    message.token.should.not.equal(undefined);
+                    message.handlingToken.should.not.equal(undefined);
 
                     done();
                 });
@@ -94,7 +121,47 @@ describe('distex provider', function () {
                     id: 12345
                 });
             });
+        });
 
+        describe('and provider has published event.handler.available', function () {
+            var handlingToken;
+            beforeEach(function (done) {
+                cleanupEmitter.once('cleanup', provider.dispose.bind(provider));
+
+                canHandle = function () {
+                    return Promise.resolve(true)
+                };
+
+                clientQueue.bind('event.handler.available').then(function () {
+                    clientQueue.once('message', function confirmReceivedCorrectMessage(message) {
+                        message = JSON.parse(message);
+                        handlingToken = message.handlingToken;
+
+                        done();
+                    });
+
+                    distextExchange.publish('event.handler.required', {
+                        expression: 'something',
+                        id: 12345
+                    });
+                });
+            });
+
+            function fakeClientSendingTokenAccept() {
+                distextExchange.publish(handlingToken + '.accept', {
+                    handlingToken: handlingToken,
+                    expression: 'something'
+                });
+            }
+
+            it('should acknowledge by sending *.handling where the * is handling token', function (done) {
+                clientQueue.topicEmitter.once(handlingToken + '.handling', function (message) {
+                    message = JSON.parse(message);
+                    done();
+                });
+
+                fakeClientSendingTokenAccept();
+            });
         });
     });
 
