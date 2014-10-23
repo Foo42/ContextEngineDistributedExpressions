@@ -1,6 +1,7 @@
 var EventEmitter = require('events').EventEmitter;
 var rabbitPie = require('rabbit-pie');
 var distexProvider = require('../lib/distexProvider');
+var distexClient = require('../lib/distexClient');
 require('chai').should();
 var Promise = require('promise');
 
@@ -84,6 +85,32 @@ describe('distex provider', function () {
         }).catch(function (error) {
             console.log('badness', error);
             done(error);
+        });
+    });
+
+    describe('message flow', function () {
+        var client;
+        beforeEach(function (done) {
+            distexClient.create(connection).then(function (distexClient) {
+                client = distexClient;
+                done();
+            }).catch(done);
+        });
+        describe('setting up event handler', function () {
+            it('should contain the following messages', function (done) {
+                distexProvider.create(connection, function canHandle(request) {
+                    return Promise.resolve(true);
+                }).then(function onDistextProviderInitialised(distexProvider) {
+                    client.requestHandler('cron:00 26 12 * * *');
+
+                    setTimeout(function () {
+                        messages[0].key.should.equal('event.handler.required');
+                        messages[1].key.should.equal('event.handler.available');
+                        messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
+                        done();
+                    }, 200);
+                }).catch(done);
+            });
         });
     });
 
