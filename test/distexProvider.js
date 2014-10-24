@@ -13,6 +13,10 @@ describe('distex provider', function () {
     var messages;
     var observerQueue;
 
+    function disposeAfterTest(thingToDispose) {
+        cleanupEmitter.once('cleanup', thingToDispose.dispose.bind(thingToDispose));
+    }
+
 
     beforeEach(function (done) {
         console.log('in before each');
@@ -76,7 +80,7 @@ describe('distex provider', function () {
             done();
             console.log('after done');
         }).then(function onDistextProviderInitialised(distexProvider) {
-            cleanupEmitter.once('cleanup', distexProvider.dispose.bind(distexProvider));
+            disposeAfterTest(distexProvider);
             console.log('distex provider initialised, publishing message')
             distextExchange.publish('event.handler.required', {
                 expression: 'cron:00 26 12 * * *',
@@ -93,17 +97,39 @@ describe('distex provider', function () {
         beforeEach(function (done) {
             distexClient.create(connection).then(function (distexClient) {
                 client = distexClient;
+                disposeAfterTest(client);
                 done();
             }).catch(done);
         });
+
         describe('setting up event handler', function () {
             it('should contain the following messages', function (done) {
                 distexProvider.create(connection, function canHandle(request) {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
                     client.requestHandler('cron:00 26 12 * * *');
+                    disposeAfterTest(distexProvider);
 
                     setTimeout(function () {
+                        messages[0].key.should.equal('event.handler.required');
+                        messages[1].key.should.equal('event.handler.available');
+                        messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
+                        done();
+                    }, 200);
+                }).catch(done);
+            });
+        });
+
+        describe('watching an expression', function () {
+            it('should contain the following messages', function (done) {
+                distexProvider.create(connection, function canHandle(request) {
+                    return Promise.resolve(true);
+                }).then(function onDistextProviderInitialised(distexProvider) {
+                    var expression = client.requestHandler('cron:00 26 12 * * *');
+                    disposeAfterTest(distexProvider);
+
+                    setTimeout(function () {
+                        expression.getStatus().should.equal('handled');
                         messages[0].key.should.equal('event.handler.required');
                         messages[1].key.should.equal('event.handler.available');
                         messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
@@ -122,14 +148,13 @@ describe('distex provider', function () {
             distexProvider.create(connection, function canHandleWrapper(request) {
                 return canHandle(request)
             }).then(function (distexProvider) {
+                disposeAfterTest(distexProvider);
                 provider = distexProvider;
                 done();
             }).catch(done);
         });
 
         it('should should publish event.handler.available when supplied callback returns a truthy promise', function (done) {
-            cleanupEmitter.once('cleanup', provider.dispose.bind(provider));
-
             canHandle = function () {
                 return Promise.resolve(true)
             };
@@ -153,7 +178,6 @@ describe('distex provider', function () {
         describe('and provider has published event.handler.available', function () {
             var handlingToken;
             beforeEach(function (done) {
-                cleanupEmitter.once('cleanup', provider.dispose.bind(provider));
 
                 canHandle = function () {
                     return Promise.resolve(true)
