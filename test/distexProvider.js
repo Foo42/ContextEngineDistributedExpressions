@@ -17,7 +17,6 @@ describe('distex provider', function () {
         cleanupEmitter.once('cleanup', thingToDispose.dispose.bind(thingToDispose));
     }
 
-
     beforeEach(function (done) {
         console.log('in before each');
         messages = [];
@@ -125,16 +124,15 @@ describe('distex provider', function () {
                 distexProvider.create(connection, function canHandle(request) {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
-                    var expression = client.requestHandler('cron:00 26 12 * * *');
                     disposeAfterTest(distexProvider);
-
-                    setTimeout(function () {
+                    var expression = client.requestHandler('cron:00 26 12 * * *');
+                    expression.on('status.handled', function () {
                         expression.getStatus().should.equal('handled');
                         messages[0].key.should.equal('event.handler.required');
                         messages[1].key.should.equal('event.handler.available');
                         messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
                         done();
-                    }, 200);
+                    });
                 }).catch(done);
             });
         });
