@@ -58,7 +58,7 @@ describe('distex provider', function () {
         observerQueue = undefined;
         setTimeout(connection.disconnect.bind(connection), 500);
         connection = undefined;
-        setTimeout(done, 1000);
+        setTimeout(done, 500);
     })
 
     afterEach(function (done) {
@@ -91,7 +91,7 @@ describe('distex provider', function () {
         });
     });
 
-    describe('message flow', function () {
+    describe.only('message flow', function () {
         var client;
         beforeEach(function (done) {
             distexClient.create(connection).then(function (distexClient) {
@@ -113,6 +113,7 @@ describe('distex provider', function () {
                         messages[0].key.should.equal('event.handler.required');
                         messages[1].key.should.equal('event.handler.available');
                         messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
+                        messages[3].key.should.equal(messages[1].message.handlingToken + '.handling');
                         done();
                     }, 200);
                 }).catch(done);
@@ -127,11 +128,17 @@ describe('distex provider', function () {
                     disposeAfterTest(distexProvider);
                     var expression = client.requestHandler('cron:00 26 12 * * *');
                     expression.on('status.handled', function () {
-                        expression.getStatus().should.equal('handled');
-                        messages[0].key.should.equal('event.handler.required');
-                        messages[1].key.should.equal('event.handler.available');
-                        messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
-                        done();
+                        setTimeout(function () {
+                            var numberOfMessagesPreWatch = messages.length;
+                            expression.on('status.watching', function () {
+                                var watchingMessages = messages.slice(numberOfMessagesPreWatch);
+                                watchingMessages[0].key.should.equal(expression.getHandlingToken() + '.watch');
+                                watchingMessages[1].key.should.equal(expression.getHandlingToken() + '.watching');
+                                done();
+                            });
+                            expression.watch();
+
+                        }, 100)
                     });
                 }).catch(done);
             });
