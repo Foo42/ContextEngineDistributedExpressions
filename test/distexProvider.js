@@ -91,7 +91,7 @@ describe('distex provider', function () {
         });
     });
 
-    describe.only('message flow', function () {
+    describe('message flow', function () {
         var client;
         beforeEach(function (done) {
             distexClient.create(connection).then(function (distexClient) {
@@ -148,6 +148,7 @@ describe('distex provider', function () {
     describe('event.handler.required published', function () {
         var canHandle;
         var provider;
+        var eventExpression = 'cron:00 26 12 * * *';
         beforeEach(function initialiseDistexProvider(done) {
             canHandle = undefined;
             distexProvider.create(connection, function canHandleWrapper(request) {
@@ -174,7 +175,7 @@ describe('distex provider', function () {
                 });
 
                 distextExchange.publish('event.handler.required', {
-                    expression: 'cron:00 26 12 * * *',
+                    expression: eventExpression,
                     id: 12345
                 });
             });
@@ -197,7 +198,7 @@ describe('distex provider', function () {
                     });
 
                     distextExchange.publish('event.handler.required', {
-                        expression: 'something',
+                        expression: eventExpression,
                         id: 12345
                     });
                 });
@@ -218,6 +219,16 @@ describe('distex provider', function () {
 
                 fakeClientSendingTokenAccept();
             });
+
+            it.only('should emit a "contract accepted" event when offer to handle is accepted', function (done) {
+                provider.once('contract accepted', function (contract) {
+                    contract.expression.should.equal(eventExpression);
+                    done();
+                });
+                fakeClientSendingTokenAccept();
+            });
+
+
         });
     });
 
