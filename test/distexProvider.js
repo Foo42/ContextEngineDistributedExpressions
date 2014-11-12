@@ -69,7 +69,7 @@ describe('distex provider', function () {
         if (cleanupEmitter) {
             cleanupEmitter.emit('cleanup')
         };
-        setTimeout(done, 1000);
+        setTimeout(done, 100);
     });
 
     it('should call supplied callback when handlerRequired message is recieved', function (done) {
@@ -106,16 +106,17 @@ describe('distex provider', function () {
                 distexProvider.create(connection, function canHandle(request) {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
-                    client.requestHandler('cron:00 26 12 * * *');
+                    var contract = client.requestHandler('cron:00 26 12 * * *');
                     disposeAfterTest(distexProvider);
+                    contract.once('status.handled', setTimeout.bind(null, function () {
 
-                    setTimeout(function () {
+                        console.log('contract handled asserting against captured message flow');
                         messages[0].key.should.equal('event.handler.required');
                         messages[1].key.should.equal('event.handler.available');
                         messages[2].key.should.equal(messages[1].message.handlingToken + '.accept');
                         messages[3].key.should.equal(messages[1].message.handlingToken + '.handling');
                         done();
-                    }, 200);
+                    }), 50);
                 }).catch(done);
             });
         });
@@ -220,7 +221,7 @@ describe('distex provider', function () {
                 fakeClientSendingTokenAccept();
             });
 
-            it.only('should emit a "contract accepted" event when offer to handle is accepted', function (done) {
+            it('should emit a "contract accepted" event when offer to handle is accepted', function (done) {
                 provider.once('contract accepted', function (contract) {
                     contract.expression.should.equal(eventExpression);
                     done();
@@ -228,6 +229,26 @@ describe('distex provider', function () {
                 fakeClientSendingTokenAccept();
             });
 
+            it('contract should emit a "watching" event when client requests expression enter watched state', function (done) {
+
+                distexClient.create(connection).then(function (client) {
+                    disposeAfterTest(client);
+                    var clientContract;
+
+                    provider.once('contract accepted', function (providerContract) {
+                        providerContract.once('watching', function () {
+                            done();
+                        });
+
+                    });
+
+                    clientContract = client.requestHandler('cron:00 26 12 * * *');
+                    clientContract.on('status.handled', function () {
+                        clientContract.watch();
+                    });
+
+                }).catch(done);
+            });
 
         });
     });
