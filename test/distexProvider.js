@@ -128,18 +128,88 @@ describe('distex provider', function () {
                 }).then(function onDistextProviderInitialised(distexProvider) {
                     disposeAfterTest(distexProvider);
                     var expression = client.requestHandler('cron:00 26 12 * * *');
-                    expression.on('status.handled', function () {
+                    expression.once('status.handled', function () {
                         setTimeout(function () {
                             var numberOfMessagesPreWatch = messages.length;
-                            expression.on('status.watching', function () {
-                                var watchingMessages = messages.slice(numberOfMessagesPreWatch);
-                                watchingMessages[0].key.should.equal(expression.getHandlingToken() + '.watch');
-                                watchingMessages[1].key.should.equal(expression.getHandlingToken() + '.watching');
-                                done();
+                            expression.once('status.watching', function () {
+                                setTimeout(function () {
+                                    var watchingMessages = messages.slice(numberOfMessagesPreWatch);
+                                    watchingMessages[0].key.should.equal(expression.getHandlingToken() + '.watch');
+                                    watchingMessages[1].key.should.equal(expression.getHandlingToken() + '.watching');
+                                    done();
+                                }, 500)
                             });
                             expression.watch();
 
-                        }, 100)
+                        }, 500)
+                    });
+                }).catch(done);
+            });
+        });
+
+        describe('unwatching an expression', function () {
+            it('should contain the following messages', function (done) {
+                distexProvider.create(connection, function canHandle(request) {
+                    return Promise.resolve(true);
+                }).then(function onDistextProviderInitialised(distexProvider) {
+                    disposeAfterTest(distexProvider);
+                    var expression = client.requestHandler('cron:00 26 12 * * *');
+                    expression.once('status.handled', function () {
+                        setTimeout(function () {
+                            expression.once('status.watching', function () {
+                                setTimeout(function () {
+                                    var numberOfMessagesAfterWatching = messages.length;
+                                    expression.once('status.notWatching', function () {
+                                        setTimeout(function () {
+                                            var unwatchingMessages = messages.slice(numberOfMessagesAfterWatching);
+                                            console.log(unwatchingMessages);
+                                            unwatchingMessages[0].key.should.equal(expression.getHandlingToken() + '.stopWatching');
+                                            unwatchingMessages[1].key.should.equal(expression.getHandlingToken() + '.notWatching');
+                                            done();
+                                        }, 200);
+                                    });
+                                    expression.stopWatching();
+                                }, 200);
+
+                            });
+                            expression.watch();
+
+                        }, 200)
+                    });
+                }).catch(done);
+            });
+        });
+
+        describe('Emitting events from the provider to client while watching', function () {
+            it('should emit events on the client contract when pushed in from the provider', function (done) {
+                distexProvider.create(connection, function canHandle(request) {
+                    return Promise.resolve(true);
+                }).then(function onDistextProviderInitialised(distexProvider) {
+                    disposeAfterTest(distexProvider);
+                    var providerContract;
+                    distexProvider.once('contract accepted', function (contract) {
+                        providerContract = contract;
+                    });
+
+                    var clientContract = client.requestHandler('cron:00 26 12 * * *');
+                    clientContract.once('status.handled', function () {
+                        clientContract.once('status.watching', function () {
+                            console.log('recieved acknowledgement that contract is watching')
+                            var eventToSend = {
+                                foo: 'bar'
+                            };
+
+                            clientContract.once('event.recieved', function (eventBody) {
+                                console.log('recieved event');
+                                eventBody.should.deep.equal(eventToSend);
+                                done();
+                            });
+
+                            console.log('sent event')
+                            providerContract.pushEvent(eventToSend);
+                        });
+
+                        clientContract.watch();
                     });
                 }).catch(done);
             });
