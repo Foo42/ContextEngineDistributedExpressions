@@ -1,5 +1,5 @@
 {
-  "name": "ContextEngineDistributedExpressions",
+  "name": "distex",
   "version": "0.1.0",
   "description": "distributed context expressions for context engine",
   "main": "index.js",
