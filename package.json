@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "amqp": "^0.2.0",
+    "bluebird": "^2.9.25",
     "promise": "~5.0.0",
     "rabbit-pie": "0.0.3"
   },
