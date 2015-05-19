@@ -1,6 +1,6 @@
 {
   "name": "distex",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "distributed context expressions for context engine",
   "main": "index.js",
   "scripts": {
