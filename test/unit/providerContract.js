@@ -23,7 +23,7 @@ describe('providerContract', function () {
                         onPublishCalled();
                     }
                 }
-                var contract = createContract('123', 'some expression', fakeDistexExchange);
+                var contract = createContract('123', 'some expression', 'someUser', fakeDistexExchange);
                 contract.on('watching', function () {
                     onEventRecieved();
                 })
@@ -57,7 +57,7 @@ describe('providerContract', function () {
                     publish: onPublishCalled
                 }
 
-                var contract = createContract('123', 'some expression', fakeDistexExchange);
+                var contract = createContract('123', 'some expression', 'someUser', fakeDistexExchange);
                 contract.startWatching = function customStartWatchingFunctionWithArbitraryDelay() {
                     return new Promise(function (resolve, reject) {
                         setTimeout(resolve, 200);
@@ -99,7 +99,7 @@ describe('providerContract', function () {
                     }
                 }
             };
-            contract = createContract('123', 'some expression', fakeDistexExchange);
+            contract = createContract('123', 'some expression', 'someUser', fakeDistexExchange);
             contract.on('notWatching', function () {
                 onEventRecieved();
             })
