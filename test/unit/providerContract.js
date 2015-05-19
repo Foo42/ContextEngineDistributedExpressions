@@ -3,7 +3,7 @@ var Promise = require('bluebird');
 
 describe('providerContract', function () {
     describe('watching', function () {
-        describe('without custom beginWatching function', function () {
+        describe('without custom startWatching function', function () {
             it('should emit watching event and distex message straight away', function (done) {
                 var onPublishCalled;
                 var onEventRecieved;
@@ -31,8 +31,8 @@ describe('providerContract', function () {
                 contract.handleMessage('watch')
             });
         });
-        describe('with a custom beginWatching function', function () {
-            it('should not emit watching event or distex message until promise returned by beginWatching is fulfilled', function (done) {
+        describe('with a custom startWatching function', function () {
+            it('should not emit watching event or distex message until promise returned by startWatching is fulfilled', function (done) {
                 var tooSoon = true;
                 var onPublishCalled;
                 var onEventRecieved;
@@ -58,7 +58,7 @@ describe('providerContract', function () {
                 }
 
                 var contract = createContract('123', 'some expression', fakeDistexExchange);
-                contract.beginWatching = function customBeginWatchingFunctionWithArbitraryDelay() {
+                contract.startWatching = function customStartWatchingFunctionWithArbitraryDelay() {
                     return new Promise(function (resolve, reject) {
                         setTimeout(resolve, 200);
                     }).then(function () {
