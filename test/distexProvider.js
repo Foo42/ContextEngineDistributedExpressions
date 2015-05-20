@@ -196,7 +196,8 @@ describe('distex provider', function () {
                         clientContract.once('status.watching', function () {
                             console.log('recieved acknowledgement that contract is watching')
                             var eventToSend = {
-                                foo: 'bar'
+                                foo: 'bar',
+                                requestId: clientContract.requestId
                             };
 
                             clientContract.once('event.recieved', function (eventBody) {
