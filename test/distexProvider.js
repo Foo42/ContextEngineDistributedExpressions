@@ -119,6 +119,21 @@ describe('distex provider', function () {
                     }), 50);
                 }).catch(done);
             });
+
+            it('should publish userId in event.handler.required event if it was supplied with request', function (done) {
+                distexProvider.create(connection, function canHandle(request) {
+                    return Promise.resolve(true);
+                }).then(function onDistextProviderInitialised(distexProvider) {
+                    var contract = client.requestHandler('some user specific thing', 'someUserId');
+                    disposeAfterTest(distexProvider);
+                    contract.once('status.handled', setTimeout.bind(null, function () {
+
+                        messages[0].key.should.equal('event.handler.required');
+                        messages[0].message.userId.should.equal('someUserId');
+                        done();
+                    }), 50);
+                }).catch(done);
+            });
         });
 
         describe('watching an expression', function () {
