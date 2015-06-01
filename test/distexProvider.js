@@ -215,9 +215,9 @@ describe('distex provider', function () {
                                 requestId: clientContract.requestId
                             };
 
-                            clientContract.once('event.recieved', function (eventBody) {
+                            clientContract.once('event.recieved', function (message) {
                                 console.log('recieved event');
-                                eventBody.should.deep.equal(eventToSend);
+                                message.event.should.deep.equal(eventToSend);
                                 done();
                             });
 
