@@ -106,7 +106,9 @@ describe('distex provider', function () {
                 distexProvider.create(connection, function canHandle(request) {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
-                    var contract = client.requestHandler('cron:00 26 12 * * *');
+                    var contract = client.requestHandler({
+                        expresssion: 'cron:00 26 12 * * *'
+                    });
                     disposeAfterTest(distexProvider);
                     contract.once('status.handled', setTimeout.bind(null, function () {
 
@@ -124,7 +126,10 @@ describe('distex provider', function () {
                 distexProvider.create(connection, function canHandle(request) {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
-                    var contract = client.requestHandler('some user specific thing', 'someUserId');
+                    var contract = client.requestHandler({
+                        expression: 'some user specific thing',
+                        userId: 'someUserId'
+                    });
                     disposeAfterTest(distexProvider);
                     contract.once('status.handled', setTimeout.bind(null, function () {
 
@@ -142,7 +147,9 @@ describe('distex provider', function () {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
                     disposeAfterTest(distexProvider);
-                    var expression = client.requestHandler('cron:00 26 12 * * *');
+                    var expression = client.requestHandler({
+                        expression: 'cron:00 26 12 * * *'
+                    });
                     expression.once('status.handled', function () {
                         setTimeout(function () {
                             var numberOfMessagesPreWatch = messages.length;
@@ -168,7 +175,9 @@ describe('distex provider', function () {
                     return Promise.resolve(true);
                 }).then(function onDistextProviderInitialised(distexProvider) {
                     disposeAfterTest(distexProvider);
-                    var expression = client.requestHandler('cron:00 26 12 * * *');
+                    var expression = client.requestHandler({
+                        expression: 'cron:00 26 12 * * *'
+                    });
                     expression.once('status.handled', function () {
                         setTimeout(function () {
                             expression.once('status.watching', function () {
@@ -206,7 +215,9 @@ describe('distex provider', function () {
                         providerContract = contract;
                     });
 
-                    var clientContract = client.requestHandler('cron:00 26 12 * * *');
+                    var clientContract = client.requestHandler({
+                        expression: 'cron:00 26 12 * * *'
+                    });
                     clientContract.once('status.handled', function () {
                         clientContract.once('status.watching', function () {
                             console.log('recieved acknowledgement that contract is watching')
@@ -328,7 +339,9 @@ describe('distex provider', function () {
 
                     });
 
-                    clientContract = client.requestHandler('cron:00 26 12 * * *');
+                    clientContract = client.requestHandler({
+                        expression: 'cron:00 26 12 * * *'
+                    });
                     clientContract.on('status.handled', function () {
                         clientContract.watch();
                     });
